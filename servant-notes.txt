@@ -126,20 +126,71 @@ In the servant example code above, there are two type-level operators being used
 
 Let's look at how (:>) and (:<|>) are defined in servant:
 
+```
 data path :> a
 
 data a :<|> b = a :<|> b
+```
 
+If we didn't want to write them infix, we could write them like this:
+
+```
+data (:>) path a
+
+data (:<|>) a b = (:<|>) a b
+```
+
+In fact, if we were to write these data types with letters instead of symbols, it would look something like this:
+
+```
+data Foo path a
+
+data Bar a b = Bar a b
+```
+
+You can see that (:>) and (:<|>) are just normal datatype definitions. They look weird because they are made of symbols and written infix.
+
+Type operators help us write long type definitions that are easy to understand.  Take the following API definition:
+
+```
+type MyAPI = "foo" :> "bar" >: Get '[JSON] [Int]
+```
+
+Rewriting this prefix would look like this:
+
+```
+type MyAPI = (:>) "foo" ((>:) "bar" (Get '[JSON] [Int]))
+```
+
+You can see how much easier the infix style is to read!
 
 NOTE:  You need the TypeOperators language extension enabled to use the above code.
 
 https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/data-type-extensions.html#type-operators
 
+You may be thinking, "These type operators are pretty neat, but how are they actually used?  They just look like confusing data types!"  Well, we'll get to that in a minute.  First  we need to take a look at type families.
+
 Type Families
 -------------
 
+Type families are a relatively simple addition to Haskell that allow the user to do some computation at the type level.  However, if you google for "type families" (TODO: link to google here), it's easy to get scared.
+
+https://www.google.co.jp/search?q=haskell+type+families&ie=utf-8&oe=utf-8&gws_rd=cr&ei=OzuSVZSMA6S-mAX044aoCQ
+
+The first result is the GHC/Type families article on the Haskell wiki (https://wiki.haskell.org/GHC/Type_families).  This is written with an advanced Haskeller in mind.  Don't worry if it goes completely over your head.  (The other problem is that most of their examples use data families instead of type families--which I introduce below.  Most of the realworld Haskell code I've seen uses type families much more than data families).
+
+The second link is to the GHC manual.  It's good if you already know about type families and just want a refresher, but it's not good if you just an introduction to type families.  https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/type-families.html
+
+The third result is https://www.fpcomplete.com/school/to-infinity-and-beyond/pick-of-the-week/type-families-and-pokemon an article on fpcomplete.  It gets points for being about Pokemon, but the setup/motivation for using type families is way too long.
+
+The fourth result is an introduction to type families from O'Charles (https://ocharles.org.uk/blog/posts/2014-12-12-type-families.html).  It's the best of the bunch, but it is slightly hard to follow if you've never used MVars, IORefs, etc.
+
+I wrote a super simple tl;dr presentation about type families.  https://cdepillabout.github.io/haskell-type-families-presentation
+Originally I wrote it in Japanese for a Haskell Lightening Talk in Tokyo, but I recently translated it to English upon the request from someone in the #haskell room in the functional programming slack community (http://fpchat.com/).  If you aren't sure about type families, please read that presentation and then proceed to the next section.  We will be talking about the ServantT type familiy.
 
 
+Servant
+-------
 
 
 Conclusion
