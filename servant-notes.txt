@@ -38,4 +38,10 @@ explain how these features are used in practice.
 Servant Example
 ---------------
 
+Here is a simple example of using servant-server.
+
+type UserAPI = "dogs" :> Get '[JSON] [Int]
+          :<|> "cats" :> Get '[JSON] [String]
+
+
 
