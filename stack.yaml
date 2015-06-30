@@ -1,5 +1,7 @@
 flags: {}
 packages:
 - '.'
-extra-deps: []
-resolver: nightly-2015-06-17
+extra-deps:
+    - servant-0.4.2
+    - servant-server-0.4.2
+resolver: lts-2.14
