@@ -3,9 +3,9 @@
 
 module Main where
 
-import Control.Monad.Trans.Either   (EitherT)
-import Network.Wai                  (Application)
-import Network.Wai.Handler.Warp     (run)
+import Control.Monad.Trans.Either (EitherT)
+import Network.Wai (Application)
+import Network.Wai.Handler.Warp (run)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Servant
     ( (:>), (:<|>)((:<|>)), Get, JSON, Proxy(..), ServantErr, ServerT, serve )
