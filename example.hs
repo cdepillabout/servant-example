@@ -14,10 +14,7 @@ type MyAPI = "dogs" :> Get '[JSON] [Int]
         :<|> "cats" :> Get '[JSON] [String]
 
 app :: Application
-app = serve userAPI server
-  where
-    userAPI :: Proxy MyAPI
-    userAPI = Proxy
+app = serve (Proxy :: Proxy MyAPI) server
 
 server :: ServerT MyAPI (EitherT ServantErr IO)
 server = dogNums :<|> cats

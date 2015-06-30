@@ -9,6 +9,8 @@
 	- proxy type
 	- symbolVal :: KnownSymbol n => proxy n -> String
 
+- type level lists
+
 
 instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
 	type ServerT (path :> sublayout) m = ServerT sublayout m
@@ -31,17 +33,39 @@ instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout
 
 Servant is a really nice library for building REST APIs in Haskell.  However,
 it uses some advanced GHC features which may not be familiar to some Haskell
-programmers.  In this article, I explain type-level strings, type-level
-functions, and type families.  Finally, I use code from servant-server to
-explain how these features are used in practice.
+programmers.  In this article, I explain type-level strings, type-level lists,
+type-level operators, and type families.  Finally, I use code from
+servant-server to explain how these features are used in practice.
 
 Servant Example
 ---------------
 
 Here is a simple example of using servant-server.
 
-type UserAPI = "dogs" :> Get '[JSON] [Int]
-          :<|> "cats" :> Get '[JSON] [String]
+
+Type-Level Strings
+------------------
 
 
+Type-Level Lists
+----------------
 
+
+Type-Level Operators
+--------------------
+
+In the servant example code above, there are two type-level operators being used: (:>) and (:<|>).  Type-level operators are similar to normal data types.  They are just composed of symbols instead of letters.
+
+Let's look at how (:>) and (:<|>) are defined in servant:
+
+data path :> a
+
+data a :<|> b = a :<|> b
+
+
+NOTE:  You need the TypeOperators language extension enabled to use the above code.
+
+https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/data-type-extensions.html#type-operators
+
+Type Families
+-------------
