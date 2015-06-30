@@ -26,5 +26,16 @@ instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout
 		toText :: String -> Text
 		toText string = cs string
 
+----------------------------------------------------------------------------------------
 
-Servant is a really nice library for building REST APIs in Haskell.  However, it is using a couple advanced GHC features which may not be familiar some Haskell programmers.
+
+Servant is a really nice library for building REST APIs in Haskell.  However,
+it uses some advanced GHC features which may not be familiar to some Haskell
+programmers.  In this article, I explain type-level strings, type-level
+functions, and type families.  Finally, I use code from servant-server to
+explain how these features are used in practice.
+
+Servant Example
+---------------
+
+
