@@ -62,10 +62,10 @@ type MyAPI = "dogs" :> Get '[JSON] [Int]
         :<|> "cats" :> Get '[JSON] [String]
 
 app :: Application
-app = serve (Proxy :: Proxy MyAPI) server
+app = serve (Proxy :: Proxy MyAPI) myAPI
 
-server :: ServerT MyAPI (EitherT ServantErr IO)
-server = dogNums :<|> cats
+myAPI :: ServerT MyAPI (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
 
 dogNums :: EitherT ServantErr IO [Int]
 dogNums = return [1,2,3,4]
@@ -191,6 +191,77 @@ Originally I wrote it in Japanese for a Haskell Lightening Talk in Tokyo, but I 
 
 Servant
 -------
+
+So now we come to how servant actually uses these things.  Let's go back to the example code at the top of this blog post:
+
+
+```
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
+
+module Main where
+
+import Control.Monad.Trans.Either (EitherT)
+import Network.Wai (Application)
+import Network.Wai.Handler.Warp (run)
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
+import Servant
+    ( (:>), (:<|>)((:<|>)), Get, JSON, Proxy(..), ServantErr, ServerT, serve )
+
+type MyAPI = "dogs" :> Get '[JSON] [Int]
+        :<|> "cats" :> Get '[JSON] [String]
+
+app :: Application
+app = serve (Proxy :: Proxy MyAPI) myAPI
+
+myAPI :: ServerT MyAPI (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+
+dogNums :: EitherT ServantErr IO [Int]
+dogNums = return [1,2,3,4]
+
+cats :: EitherT ServantErr IO [String]
+cats = return ["long-haired", "short-haired"]
+
+main :: IO ()
+main = run 32323 $ logStdoutDev app
+```
+
+The two interesting functions are serve and myAPI.  serve is provided by servant-server, while myAPI is written by us.
+
+Let's look at the type of serve:
+
+```
+ghci> import Servant.Server
+ghci> :type serve
+serve :: HasServer layout => Proxy layout
+						  -> Server layout
+						  -> Network.Wai.Application 
+```
+
+Let's start with the easy things.  You can see that it returns a 'Network.Wai.Application'.  This represents an application that can that can be served by Warp (i.e. something that can be passed to the 'run' function).
+
+The first argument is Proxy layout.  This is how we tell the serve function what our API type is.  You might be asking, "If we are also passing the layout type variable to the Server type constructor, why do we additionally need to pass a Proxy layout?  Surely, we don't need to pass it twice?".  That will be covered later.
+
+(If you don't understand this, look at the type of the serve function again:
+
+```
+serve :: HasServer layout => Proxy <b>layout</b>
+						  -> Server </b>layout</b>
+						  -> Network.Wai.Application 
+```
+
+layout is specified twice, when it should only have to be specified once, right?)
+
+Now look at the second argument, Server layout.  What is Server?
+
+```
+ghci> :info! Server
+type Server layout =
+	ServerT layout (EitherT ServantErr IO)
+```
+
+Server looks like it is a specialization of ServerT around the EitherT
 
 
 Conclusion
