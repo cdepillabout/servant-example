@@ -1,1 +1,22 @@
-hello
+
+- type level functions ((:>) and (:<|>))
+	- TypeOperators extension
+
+		instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
+			type ServerT (path :> sublayout) m = ServerT sublayout m
+
+			route Proxy subserver = StaticRouter $
+				M.singleton (cs (symbolVal proxyPath))
+							(route proxySublayout subserver)
+			  where
+			    proxyPath :: Proxy path
+			    proxyPath = Proxy
+
+				proxySublayout :: Proxy sublayout
+				proxySublayout = Proxy
+
+- type families (Server and ServerT)
+
+- type level strings
+	- proxy type
+	- symbolVal :: KnownSymbol n => proxy n -> String
