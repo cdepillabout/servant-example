@@ -11,7 +11,9 @@
 
 - type level lists
 
+- example
 
+```
 instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
 	type ServerT (path :> sublayout) m = ServerT sublayout m
 
@@ -27,6 +29,7 @@ instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout
 
 		toText :: String -> Text
 		toText string = cs string
+```
 
 ----------------------------------------------------------------------------------------
 
@@ -42,6 +45,7 @@ Servant Example
 
 Here is a simple example of using servant-server.
 
+```
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -71,11 +75,44 @@ cats = return ["long-haired", "short-haired"]
 
 main :: IO ()
 main = run 32323 $ logStdoutDev app
+```
 
-This example project can be found at the gist ...
+This example project can be found at the gist https://gist.github.com/cdepillabout/c2b8b1807e1f571fdb45#file-example-hs
+
+The following steps can be used to download and run the code.  The stack build tool is used.
+
+```
+$ git clone https://gist.github.com/c2b8b1807e1f571fdb45.git
+$ mv c2b8b1807e1f571fdb45 small-servant-example
+$ cd small-servant-example
+$ stack build
+$ stack exec servant-notes
+```
+
+This runs a Warp server on port 32323.  With the server running, you can use curl to test the API.
+
+```
+$ curl http://localhost:32323/dogs
+[1,2,3,4]
+$ curl http://localhost:32323/cats
+["long-haired","short-haired"]
+$
+```
+
+You can also open the code in ghci.
+
+```
+$ stack ghci
+ghci> :load example.hs
+ghci> :info app
+app :: Application      -- Defined at example.hs:17:1
+ghci>
+```
 
 Type-Level Strings
 ------------------
+
+
 
 
 Type-Level Lists
@@ -100,3 +137,16 @@ https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/data-type-extens
 
 Type Families
 -------------
+
+
+
+
+
+Conclusion
+----------
+
+If you liked this tutorial, you may also like the servant tutorial itself
+(http://haskell-servant.github.io/tutorial/), or a tutorial about using servant
+with persistent
+(http://www.parsonsmatt.org/programming/2015/06/07/servant-persistent.html) by
+Matt Parsons (http://www.parsonsmatt.org/).
