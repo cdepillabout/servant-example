@@ -256,13 +256,27 @@ layout is specified twice, when it should only have to be specified once, right?
 Now look at the second argument, Server layout.  What is Server?
 
 ```
-ghci> :info! Server
+ghci> :info Server
 type Server layout =
 	ServerT layout (EitherT ServantErr IO)
 ```
 
-Server looks like it is a specialization of ServerT around the EitherT
+Server looks like it is a specialization of ServerT around the EitherT monad transformer.  This similar to how the Reader monad is a specialization of the ReaderT monad:
 
+```
+newtype ReaderT r m a = ...
+type Reader r a = ReaderT r Identity a
+```
+
+Okay, so Server is just a specialization of ServerT.  So then what is ServerT?
+
+```
+ghci> :info! Server
+class HasServer (layout :: k) where                                                                                                              type family ServerT (layout :: k) (m :: * -> *) :: *
+...
+```
+
+...a type family!  This is what we've been waiting for!  ServerT is a type family.  It's a function that computes a type.  Let's take a look at the HasServer type class before really diving into ServerT.
 
 Conclusion
 ----------
