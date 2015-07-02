@@ -43,7 +43,8 @@ servant-server to explain how these features are used in practice.
 Servant Example
 ---------------
 
-Here is a simple example of using servant-server.
+Here is a simple example of using servant-server.  We will refer to this code
+throughout this article.
 
 ```
 {-# LANGUAGE DataKinds #-}
@@ -77,9 +78,11 @@ main :: IO ()
 main = run 32323 $ logStdoutDev app
 ```
 
-This example project can be found at the gist https://gist.github.com/cdepillabout/c2b8b1807e1f571fdb45#file-example-hs
+This example project can be found at the gist
+https://gist.github.com/cdepillabout/c2b8b1807e1f571fdb45#file-example-hs
 
-The following steps can be used to download and run the code.  The stack build tool is used.
+The following steps can be used to download and run the code.  The stack build
+tool is used.
 
 ```
 $ git clone https://gist.github.com/c2b8b1807e1f571fdb45.git
@@ -89,7 +92,8 @@ $ stack build
 $ stack exec servant-notes
 ```
 
-This runs a Warp server on port 32323.  With the server running, you can use curl to test the API.
+This runs a Warp server on port 32323.  With the server running, you can use
+curl to test the API.
 
 ```
 $ curl http://localhost:32323/dogs
@@ -139,8 +143,7 @@ Looking at the
 [GHC.TypeLits](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html)
 module, there appears to be a
 [symbolVal](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#v:symbolVal)
-function. It looks like we can use it to get back the <i>value</i> of our
-type-level string.
+function. We can use it to get back the <i>value</i> of our type-level string.
 
 Let's take a look at this in ghci.  First we need to import
 GHC.TypeLits.symbolVal, and then import Data.Proxy.Proxy, We will be using
@@ -210,7 +213,7 @@ ghci> :kind! '[]
 ghci>
 ```
 
-We can also define type level lists with multiple elements:
+We can also define type-level lists with multiple elements:
 
 ```
 ghci> :kind! '[Int, Bool, String]
@@ -218,8 +221,8 @@ ghci> :kind! '[Int, Bool, String]
 ghci>
 ```
 
-Going back to the MyAPI example from above, we can see that servant is using
-type-level lists to represent the available content type encodings of the
+Going back to the MyAPI example from above, you can see that servant is using
+type-level lists to represent the available content-type encodings of the
 response.
 
 ```
@@ -245,13 +248,13 @@ which will take you to the
 [methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123)
 function, which will take you to the
 [AllCTRender](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant/src/Servant/API/ContentTypes.hs#L158)
-typeclass.  The AllCTRender typeclass / instance is where the real magic starts happening.
+typeclass.  The AllCTRender typeclass/instance is where the real magic starts happening.
 
 
 Type-Level Operators
 --------------------
 
-In the servant example code above, there are two type-level operators being
+In our servant example code above, there are two type-level operators being
 used: (:>) and (:<|>).  Type-level operators are similar to normal data types.
 They are just composed of symbols instead of letters.
 
@@ -310,21 +313,20 @@ Type Families
 -------------
 
 Type families are a relatively simple addition to Haskell that allow the user
-to do some computation at the type level.  However, if you google for "type
-families" (TODO: link to google here), it's easy to get scared.
-
-https://www.google.co.jp/search?q=haskell+type+families&ie=utf-8&oe=utf-8&gws_rd=cr&ei=OzuSVZSMA6S-mAX044aoCQ
+to do some computation at the type level.  However, if you google for [type
+families](https://www.google.co.jp/search?q=haskell+type+families&ie=utf-8&oe=utf-8&gws_rd=cr&ei=OzuSVZSMA6S-mAX044aoCQ),
+it's easy to get scared.
 
 The first result is the GHC/Type families article on the Haskell wiki
 (https://wiki.haskell.org/GHC/Type_families).  This is written with an advanced
-Haskeller in mind.  Don't worry if it goes completely over your head.  (The
-other problem is that most of their examples use data families instead of type
-families--which I introduce below.  Most of the realworld Haskell code I've
-seen uses type families much more than data families).
+Haskeller in mind.  Don't worry if it's too hard.  (The other problem is that
+most of their examples use data families instead of type families--which I
+introduce below.  Most of the realworld Haskell code I've seen uses type
+families much more than data families).
 
 The second link is to the GHC manual.  It's good if you already know about type
-families and just want a refresher, but it's not good if you just an
-introduction to type families.
+families and just want a refresher, but it's not good as an introduction to
+type families.
 https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/type-families.html
 
 The third result is
@@ -350,7 +352,6 @@ Servant
 
 So now we come to how servant actually uses these things.  Let's go back to the
 example code at the top of this blog post:
-
 
 ```
 {-# LANGUAGE DataKinds #-}
@@ -384,7 +385,8 @@ main :: IO ()
 main = run 32323 $ logStdoutDev app
 ```
 
-The two interesting functions are serve and myAPI.  serve is provided by servant-server, while myAPI is written by us.
+The two interesting functions are serve and myAPI.  serve is provided by
+servant-server, while myAPI is written by us.
 
 Let's look at the type of serve:
 
@@ -396,9 +398,16 @@ serve :: HasServer layout => Proxy layout
 						  -> Network.Wai.Application 
 ```
 
-Let's start with the easy things.  You can see that it returns a 'Network.Wai.Application'.  This represents an application that can that can be served by Warp (i.e. something that can be passed to the 'run' function).
+Let's start with the easy things.  You can see that it returns a
+'Network.Wai.Application'.  This represents an application that can that can be
+served by Warp (i.e. something that can be passed to the 'run' function
+provided by Warp).
 
-The first argument is Proxy layout.  This is how we tell the serve function what our API type is.  You might be asking, "If we are also passing the layout type variable to the Server type constructor, why do we additionally need to pass a Proxy layout?  Surely, we don't need to pass it twice?".  That will be covered later.
+The first argument is Proxy layout.  This is how we tell the serve function
+what our API type is.  You might be asking, "If we are also passing the layout
+type variable to the Server type constructor, why do we additionally need to
+pass a Proxy layout?  Surely, we don't need to pass it twice?".  That will be
+covered later.
 
 (If you don't understand this, look at the type of the serve function again:
 
@@ -408,7 +417,8 @@ serve :: HasServer layout => Proxy <b>layout</b>
 						  -> Network.Wai.Application 
 ```
 
-layout is specified twice, when it should only have to be specified once, right?)
+layout is specified twice, when it should only have to be specified once,
+right?)
 
 Now look at the second argument, Server layout.  What is Server?
 
@@ -418,7 +428,9 @@ type Server layout =
 	ServerT layout (EitherT ServantErr IO)
 ```
 
-Server looks like it is a specialization of ServerT around the EitherT monad transformer.  This similar to how the Reader monad is a specialization of the ReaderT monad:
+Server looks like it is a specialization of ServerT around the EitherT monad
+transformer.  This similar to how the Reader monad is a specialization of the
+ReaderT monad:
 
 ```
 newtype ReaderT r m a = ...
@@ -433,7 +445,16 @@ class HasServer (layout :: k) where                                             
 ...
 ```
 
-...a type family!  This is what we've been waiting for!  ServerT is a type family.  It's a function that computes a type.  Let's take a look at the HasServer typeclass before really diving into ServerT.
+...a type family!  This is what we've been waiting for!  ServerT is a type
+family.  It's a function that computes a type.  Let's take a look at the
+HasServer typeclass before really diving into ServerT.
+
+```
+class HasServer layout where
+  type ServerT layout (m :: * -> *) :: *
+
+  route :: Proxy layout -> IO (RouteResult (ServerT layout (EitherT ServantErr IO))) -> Router
+```
 
 Conclusion
 ----------
