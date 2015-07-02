@@ -35,7 +35,7 @@ instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout
 
 
 Servant is a really nice library for building REST APIs in Haskell.  However,
-it uses some advanced GHC features which may not be familiar to some Haskell
+it uses advanced GHC features which may not be familiar to some Haskell
 programmers.  In this article, I explain type-level strings, type-level lists,
 type-level operators, and type families.  Finally, I use code from
 servant-server to explain how these features are used in practice.
@@ -112,7 +112,9 @@ ghci>
 Type-Level Strings
 ------------------
 
-Recent versions of GHC support [type-level strings](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/type-level-literals.html).  What's a type-level string?  Well, let's play around with it in the REPL.
+Recent versions of GHC support [type-level
+strings](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/type-level-literals.html).
+What's a type-level string?  Well, let's play around with it in the REPL.
 
 First, we need to enable the DataKinds language extension.
 
@@ -129,11 +131,20 @@ ghci> :kind "hello"
 ghci>
 ```
 
-Hmm, our type-level string appears to be of kind [GHC.TypeLits.Symbol](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#t:Symbol).  So what can we do with this?
+Hmm, our type-level string appears to be of kind
+[GHC.TypeLits.Symbol](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#t:Symbol).
+So what can we do with this?
 
-Looking at the [GHC.TypeLits.symbolVal](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#v:symbolVal) function, it looks like we can get back the <i>value</i> of our type-level string.
+Looking at the
+[GHC.TypeLits](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html)
+module, there appears to be a
+[symbolVal](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#v:symbolVal)
+function. It looks like we can use it to get back the <i>value</i> of our
+type-level string.
 
-Let's take a look at this in ghci.  First we need to import GHC.TypeLits.symbolVal, and then import Data.Proxy.Proxy, We will be using Proxy to "proxy" the type-level literal.
+Let's take a look at this in ghci.  First we need to import
+GHC.TypeLits.symbolVal, and then import Data.Proxy.Proxy, We will be using
+Proxy to "proxy" the type-level literal.
 
 ```
 ghci> import GHC.TypeLits
@@ -143,23 +154,27 @@ ghci> symbolVal (Proxy :: Proxy "hello")
 ghci>
 ```
 
-This is really cool!  We are able to get back a <i>concrete value</i> of something that only exists on the <i>type-level</i>!
+This is really cool!  We are able to get back a <i>concrete value</i> of
+something that only exists on the <i>type-level</i>!
 
-How does servant use this?  Take a look at the MyAPI we defined near the top of this article:
+How does servant use this?  Take a look at the MyAPI type we defined near the
+top of this article:
 
 ```
-type MyAPI = "dogs" :> Get '[JSON] [Int]
-        :<|> "cats" :> Get '[JSON] [String]
+type MyAPI = <b>"dogs"</b> :> Get '[JSON] [Int]
+        :<|> <b>"cats"</b> :> Get '[JSON] [String]
 ```
 
-"dogs" and "cats" are type-level strings.  At the end of this article we will look at some servant-server code and see that it is using symbolVal to get the value of the type-level strings.
+"dogs" and "cats" are type-level strings.  At the end of this article we will
+look at some servant-server code and confirm that it is using symbolVal to get
+the value of the type-level strings.
 
 Type-Level Lists
 ----------------
 
 Just like we can have type-level strings, we can also have type-level lists.
 
-Just like with type-level strings, we need to enable the DataKinds language extension.
+We need to enable the DataKinds language extension.
 
 ```
 ghci> :set -XDataKinds
@@ -174,16 +189,20 @@ ghci> :kind! []
 ghci>
 ```
 
-No, wait, that's not right.  That's just the kind of the normal list construtor.  How do we write a type-level list?
+No, wait, that's not right.  That's just the kind of the normal list
+construtor.  How do we write a type-level list?
 
 Take quick peek at the GHC page on [datatype
 promotion](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/promotion.html).
 The first section is pretty interesting, as is the section on the [promoted
 list and tuple
 types](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/promotion.html#promoted-lists-and-tuples).
-There is a short example of a heterogeneous list (or HList).  A heterogeneous list is a list that has elements of different types.  In the example in Promoted List and Tuple section, you can see that foo2 represents a heterogeneous list with two elements, Int and Bool.
+There is a short example of a heterogeneous list (or HList).  A heterogeneous
+list is a list that has elements of different types.  In the example, you can
+see that foo2 represents a heterogeneous list with two elements, Int and Bool.
 
-Looking at this example, we see that we can define type-level lists by putting a quote in front of the opening bracket in the list:
+Looking at the example, we see that we can define type-level lists by putting a
+quote in front of the opening bracket in the list:
 
 ```
 ghci> :kind! '[]
@@ -199,7 +218,9 @@ ghci> :kind! '[Int, Bool, String]
 ghci>
 ```
 
-Going back to the MyAPI example from above, we can see that servant is using type-level lists to represent the available content type encodings of the response.
+Going back to the MyAPI example from above, we can see that servant is using
+type-level lists to represent the available content type encodings of the
+response.
 
 ```
 type MyAPI = "dogs" :> Get <b>'[JSON]</b> [Int]
@@ -224,7 +245,7 @@ which will take you to the
 [methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123)
 function, which will take you to the
 [AllCTRender](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant/src/Servant/API/ContentTypes.hs#L158)
-type class.
+typeclass.  The AllCTRender typeclass / instance is where the real magic starts happening.
 
 
 Type-Level Operators
@@ -288,26 +309,47 @@ that in a minute.  First  we need to take a look at type families.
 Type Families
 -------------
 
-Type families are a relatively simple addition to Haskell that allow the user to do some computation at the type level.  However, if you google for "type families" (TODO: link to google here), it's easy to get scared.
+Type families are a relatively simple addition to Haskell that allow the user
+to do some computation at the type level.  However, if you google for "type
+families" (TODO: link to google here), it's easy to get scared.
 
 https://www.google.co.jp/search?q=haskell+type+families&ie=utf-8&oe=utf-8&gws_rd=cr&ei=OzuSVZSMA6S-mAX044aoCQ
 
-The first result is the GHC/Type families article on the Haskell wiki (https://wiki.haskell.org/GHC/Type_families).  This is written with an advanced Haskeller in mind.  Don't worry if it goes completely over your head.  (The other problem is that most of their examples use data families instead of type families--which I introduce below.  Most of the realworld Haskell code I've seen uses type families much more than data families).
+The first result is the GHC/Type families article on the Haskell wiki
+(https://wiki.haskell.org/GHC/Type_families).  This is written with an advanced
+Haskeller in mind.  Don't worry if it goes completely over your head.  (The
+other problem is that most of their examples use data families instead of type
+families--which I introduce below.  Most of the realworld Haskell code I've
+seen uses type families much more than data families).
 
-The second link is to the GHC manual.  It's good if you already know about type families and just want a refresher, but it's not good if you just an introduction to type families.  https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/type-families.html
+The second link is to the GHC manual.  It's good if you already know about type
+families and just want a refresher, but it's not good if you just an
+introduction to type families.
+https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/type-families.html
 
-The third result is https://www.fpcomplete.com/school/to-infinity-and-beyond/pick-of-the-week/type-families-and-pokemon an article on fpcomplete.  It gets points for being about Pokemon, but the setup/motivation for using type families is way too long.
+The third result is
+https://www.fpcomplete.com/school/to-infinity-and-beyond/pick-of-the-week/type-families-and-pokemon
+an article on fpcomplete.  It gets points for being about Pokemon, but the
+setup/motivation for using type families is way too long.
 
-The fourth result is an introduction to type families from O'Charles (https://ocharles.org.uk/blog/posts/2014-12-12-type-families.html).  It's the best of the bunch, but it is slightly hard to follow if you've never used MVars, IORefs, etc.
+The fourth result is an introduction to type families from O'Charles
+(https://ocharles.org.uk/blog/posts/2014-12-12-type-families.html).  It's the
+best of the bunch, but it is slightly hard to follow if you've never used
+MVars, IORefs, etc.
 
-I wrote a super simple tl;dr presentation about type families.  https://cdepillabout.github.io/haskell-type-families-presentation
-Originally I wrote it in Japanese for a Haskell Lightening Talk in Tokyo, but I recently translated it to English upon the request from someone in the #haskell room in the functional programming slack community (http://fpchat.com/).  If you aren't sure about type families, please read that presentation and then proceed to the next section.  We will be talking about the ServantT type familiy.
-
+I wrote a super simple tl;dr [presentation about type
+families](https://cdepillabout.github.io/haskell-type-families-presentation).
+Originally I wrote it in Japanese for a Haskell Lightening Talk in Tokyo, but I
+recently translated it to English upon the request from someone in the #haskell
+room in the functional programming slack community (http://fpchat.com/).  If
+you aren't sure about type families, please read that presentation and then
+proceed to the next section.  We will be discussing the ServantT type familiy.
 
 Servant
 -------
 
-So now we come to how servant actually uses these things.  Let's go back to the example code at the top of this blog post:
+So now we come to how servant actually uses these things.  Let's go back to the
+example code at the top of this blog post:
 
 
 ```
@@ -391,7 +433,7 @@ class HasServer (layout :: k) where                                             
 ...
 ```
 
-...a type family!  This is what we've been waiting for!  ServerT is a type family.  It's a function that computes a type.  Let's take a look at the HasServer type class before really diving into ServerT.
+...a type family!  This is what we've been waiting for!  ServerT is a type family.  It's a function that computes a type.  Let's take a look at the HasServer typeclass before really diving into ServerT.
 
 Conclusion
 ----------
