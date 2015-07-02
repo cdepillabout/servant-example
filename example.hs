@@ -10,7 +10,9 @@ import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Servant
     ( (:>), (:<|>)((:<|>)), Get, JSON, Proxy(..), ServantErr, ServerT, serve )
 
-type MyAPI = "dogs" :> Get '[JSON] [Int]
+data Lala = Lala
+
+type MyAPI = "dogs" :> Get '[JSON] [Lala]
         :<|> "cats" :> Get '[JSON] [String]
 
 app :: Application
@@ -19,8 +21,8 @@ app = serve (Proxy :: Proxy MyAPI) server
 server :: ServerT MyAPI (EitherT ServantErr IO)
 server = dogNums :<|> cats
 
-dogNums :: EitherT ServantErr IO [Int]
-dogNums = return [1,2,3,4]
+dogNums :: EitherT ServantErr IO [Lala]
+dogNums = return [Lala]
 
 cats :: EitherT ServantErr IO [String]
 cats = return ["long-haired", "short-haired"]
