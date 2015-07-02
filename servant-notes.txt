@@ -159,10 +159,80 @@ Type-Level Lists
 
 Just like we can have type-level strings, we can also have type-level lists.
 
+Just like with type-level strings, we need to enable the DataKinds language extension.
+
+```
+ghci> :set -XDataKinds
+ghci>
+```
+
+Let's look at the kind of a type-level empty list:
+
+```
+ghci> :kind! []
+[] :: * -> *
+ghci>
+```
+
+No, wait, that's not right.  That's just the kind of the normal list construtor.  How do we write a type-level list?
+
+Take quick peek at the GHC page on [datatype
+promotion](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/promotion.html).
+The first section is pretty interesting, as is the section on the [promoted
+list and tuple
+types](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/promotion.html#promoted-lists-and-tuples).
+There is a short example of a heterogeneous list (or HList).  A heterogeneous list is a list that has elements of different types.  In the example in Promoted List and Tuple section, you can see that foo2 represents a heterogeneous list with two elements, Int and Bool.
+
+Looking at this example, we see that we can define type-level lists by putting a quote in front of the opening bracket in the list:
+
+```
+ghci> :kind! '[]
+'[] :: [k]
+ghci>
+```
+
+We can also define type level lists with multiple elements:
+
+```
+ghci> :kind! '[Int, Bool, String]
+'[Int, Bool, String] :: [*]
+ghci>
+```
+
+Going back to the MyAPI example from above, we can see that servant is using type-level lists to represent the available content type encodings of the response.
+
+```
+type MyAPI = "dogs" :> Get <b>'[JSON]</b> [Int]
+        :<|> "cats" :> Get <b>'[JSON]</b> [String]
+```
+
+Servant is only willing to send back responses in JSON.
+
+Additional content types could also be specified:
+
+```
+type MyAPI = "dogs" :> Get <b>'[JSON, FormUrlEncoded]</b> [Int]
+        :<|> "cats" :> Get <b>'[JSON, PlainText]</b> Text
+```
+
+(However, to get this to compile, we would need to have an instance of ToFormUrlEncoded [Int].)
+
+I'm not going to go into how type-level lists are used in servant-server, but
+if you're interested you may want to start with reading the [Get instance for
+HasServer](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L230),
+which will take you to the
+[methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123)
+function, which will take you to the
+[AllCTRender](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant/src/Servant/API/ContentTypes.hs#L158)
+type class.
+
+
 Type-Level Operators
 --------------------
 
-In the servant example code above, there are two type-level operators being used: (:>) and (:<|>).  Type-level operators are similar to normal data types.  They are just composed of symbols instead of letters.
+In the servant example code above, there are two type-level operators being
+used: (:>) and (:<|>).  Type-level operators are similar to normal data types.
+They are just composed of symbols instead of letters.
 
 Let's look at how (:>) and (:<|>) are defined in servant:
 
@@ -180,7 +250,8 @@ data (:>) path a
 data (:<|>) a b = (:<|>) a b
 ```
 
-In fact, if we were to write these data types with letters instead of symbols, it would look something like this:
+In fact, if we were to write these data types with letters instead of symbols,
+it would look something like this:
 
 ```
 data Foo path a
@@ -188,9 +259,11 @@ data Foo path a
 data Bar a b = Bar a b
 ```
 
-You can see that (:>) and (:<|>) are just normal datatype definitions. They look weird because they are made of symbols and written infix.
+You can see that (:>) and (:<|>) are just normal datatype definitions. They
+look weird because they are made of symbols and written infix.
 
-Type operators help us write long type definitions that are easy to understand.  Take the following API definition:
+Type operators help us write long type definitions that are easy to understand.
+Take the following API definition:
 
 ```
 type MyAPI = "foo" :> "bar" >: Get '[JSON] [Int]
@@ -208,7 +281,9 @@ NOTE:  You need the TypeOperators language extension enabled to use the above co
 
 https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/data-type-extensions.html#type-operators
 
-You may be thinking, "These type operators are pretty neat, but how are they actually used?  They just look like confusing data types!"  Well, we'll get to that in a minute.  First  we need to take a look at type families.
+You may be thinking, "These type operators are pretty neat, but how are they
+actually used?  They just look like confusing data types!"  Well, we'll get to
+that in a minute.  First  we need to take a look at type families.
 
 Type Families
 -------------
