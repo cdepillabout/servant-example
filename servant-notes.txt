@@ -112,12 +112,52 @@ ghci>
 Type-Level Strings
 ------------------
 
+Recent versions of GHC support [type-level strings](https://downloads.haskell.org/~ghc/7.10.1/docs/html/users_guide/type-level-literals.html).  What's a type-level string?  Well, let's play around with it in the REPL.
 
+First, we need to enable the DataKinds language extension.
 
+```
+ghci> :set -XDataKinds
+ghci>
+```
+
+Now, let's try to get the kind of a type-level string:
+
+```
+ghci> :kind "hello"
+"hello" :: GHC.TypeLits.Symbol
+ghci>
+```
+
+Hmm, our type-level string appears to be of kind [GHC.TypeLits.Symbol](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#t:Symbol).  So what can we do with this?
+
+Looking at the [GHC.TypeLits.symbolVal](https://hackage.haskell.org/package/base-4.8.0.0/docs/GHC-TypeLits.html#v:symbolVal) function, it looks like we can get back the <i>value</i> of our type-level string.
+
+Let's take a look at this in ghci.  First we need to import GHC.TypeLits.symbolVal, and then import Data.Proxy.Proxy, We will be using Proxy to "proxy" the type-level literal.
+
+```
+ghci> import GHC.TypeLits
+ghci> import Data.Proxy
+ghci> symbolVal (Proxy :: Proxy "hello")
+"hello"
+ghci>
+```
+
+This is really cool!  We are able to get back a <i>concrete value</i> of something that only exists on the <i>type-level</i>!
+
+How does servant use this?  Take a look at the MyAPI we defined near the top of this article:
+
+```
+type MyAPI = "dogs" :> Get '[JSON] [Int]
+        :<|> "cats" :> Get '[JSON] [String]
+```
+
+"dogs" and "cats" are type-level strings.  At the end of this article we will look at some servant-server code and see that it is using symbolVal to get the value of the type-level strings.
 
 Type-Level Lists
 ----------------
 
+Just like we can have type-level strings, we can also have type-level lists.
 
 Type-Level Operators
 --------------------
