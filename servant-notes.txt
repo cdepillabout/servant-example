@@ -220,7 +220,8 @@ type MyAPI = "dogs" :> Get <b>'[JSON, FormUrlEncoded]</b> [Int]
         :<|> "cats" :> Get <b>'[JSON, PlainText]</b> Text
 ```
 
-(However, to get this to compile, we would need to have an instance of ToFormUrlEncoded [Int].)
+(However, to get this to compile, we would need to have an instance of
+ToFormUrlEncoded [Int].)
 
 I'm not going to go into how type-level lists are used in servant-server, but
 if you're interested you may want to start with reading the [Get instance for
@@ -230,6 +231,10 @@ which will take you to the
 function, which will take you to the
 [AllCTRender](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant/src/Servant/API/ContentTypes.hs#L158)
 typeclass.  The AllCTRender typeclass/instance is where the real magic starts happening.
+
+Oliver Charles has an [interesting
+post](https://ocharles.org.uk/blog/posts/2014-08-07-postgresql-simple-generic-sop.html)
+on the generics-sop package where he talks a little about heterogeneous lists.
 
 
 Type-Level Operators
@@ -447,7 +452,8 @@ mouthful.  Let's abbreviate part of the type to make it easier to diget:
 route :: Proxy layout -> IO (RouteResult (ServerT ...)) -> Router
 ```
 
-Basically route takes an IO of a RouteResult of a ServerT and returns a Router.  Let's go back real quick and look at the implementation of the serve function:
+Basically route takes an IO of a RouteResult of a ServerT and returns a Router.
+Let's go back real quick and look at the implementation of the serve function:
 
 ```
 serve :: HasServer layout => Proxy layout -> ServerT layout (EitherT ServantErr IO) -> Application
