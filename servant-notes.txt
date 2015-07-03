@@ -758,7 +758,10 @@ myAPI :: EitherT ServantErr IO [Int]
 myAPI = dogNums :<|> cats
 ```
 
-We won't go into how the route function is implemented here, but you are welcome to look at the implementation of [methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123) if you're interested.
+We won't go into how the route function is implemented here, but you are
+welcome to look at the implementation of
+[methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123)
+if you're interested.
 
 Conclusion
 ----------
