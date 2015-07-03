@@ -1,38 +1,19 @@
 
 - type level functions ((:>) and (:<|>))
-	- TypeOperators extension
+    - TypeOperators extension
 
 
 - type families (Server and ServerT)
 
 - type level strings
-	- proxy type
-	- symbolVal :: KnownSymbol n => proxy n -> String
+    - proxy type
+    - symbolVal :: KnownSymbol n => proxy n -> String
 
 - type level lists
 
 - example
 
-```
-instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
-	type ServerT (path :> sublayout) m = ServerT sublayout m
-
-	route Proxy subserver = StaticRouter $
-		M.singleton (toText (symbolVal proxyPath))
-					(route proxySublayout subserver)
-      where
-		proxyPath :: Proxy path
-		proxyPath = Proxy
-
-		proxySublayout :: Proxy sublayout
-		proxySublayout = Proxy
-
-		toText :: String -> Text
-		toText string = cs string
-```
-
 ----------------------------------------------------------------------------------------
-
 
 Servant is a really nice library for building REST APIs in Haskell.  However,
 it uses advanced GHC features which may not be familiar to some Haskell
@@ -394,8 +375,8 @@ Let's look at the type of serve:
 ghci> import Servant.Server
 ghci> :type serve
 serve :: HasServer layout => Proxy layout
-						  -> Server layout
-						  -> Network.Wai.Application 
+                          -> Server layout
+                          -> Network.Wai.Application 
 ```
 
 Let's start with the easy things.  You can see that it returns a
@@ -413,8 +394,8 @@ covered later.
 
 ```
 serve :: HasServer layout => Proxy <b>layout</b>
-						  -> Server </b>layout</b>
-						  -> Network.Wai.Application 
+                          -> Server </b>layout</b>
+                          -> Network.Wai.Application 
 ```
 
 layout is specified twice, when it should only have to be specified once,
@@ -425,7 +406,7 @@ Now look at the second argument, Server layout.  What is Server?
 ```
 ghci> :info Server
 type Server layout =
-	ServerT layout (EitherT ServantErr IO)
+    ServerT layout (EitherT ServantErr IO)
 ```
 
 Server looks like it is a specialization of ServerT around the EitherT monad
@@ -488,7 +469,7 @@ route function.
 serve :: HasServer layout => Proxy layout -> (ServerT ...) -> Application
 serve p server = toApplication (runRouter (route p (return (RR (Right server)))))
                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-												   look at all this wrapping!!!
+                                                   look at all this wrapping!!!
 ```
 
 It takes the resulting Router from the route function, passes it to runRouter,
@@ -671,7 +652,16 @@ myAPI = <b>dogNums</b> :<|> cats
 dogNums = return [1,2,3,4]</b>
 ```
 
-You can probaby see where this is going.  The route function for the (:>) instance of HasServer will be called:
+You can probaby see where this is going.  The route function for the (:>)
+instance of HasServer will be called.  This corresponds to the ("dogs" :> Get
+'[JSON] [Int]) portion of MyAPI:
+
+```
+type MyAPI = <b>"dogs" :> Get '[JSON] [Int]</b>
+        :<|> "cats" :> Get '[JSON] [String]
+```
+
+Here is the HasServer instance for (:>):
 
 ```
 instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
@@ -684,12 +674,110 @@ instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout
     where proxyPath = Proxy :: Proxy path
 ```
 
-Similarly to (:<|>), you can see that the value of the ServerT type family becomes ServerT sublayout m.
+Similarly to (:<|>), you can see that the value of the ServerT type family
+becomes ServerT sublayout m.  The path portion is basically ignored.
 
+Just like above, we can change the type of myAPI to match this.  After our last
+change, we had this:  
 
+```
+myAPI :: ServerT ("dogs" :> Get '[JSON] [Int]) (EitherT ServantErr IO)
+    :<|> ServerT ("cats" :> Get '[JSON] [String]) (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+```
+
+Because the path portion is ignored, we can change it to this:
+
+```
+myAPI :: ServerT (Get '[JSON] [Int]) (EitherT ServantErr IO)
+    :<|> ServerT (Get '[JSON] [String]) (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+```
+
+Still compiles!  Great!
+
+If path is ignored in the type family, what is it actually used for?
+
+symbolVal is called to get the value of path at the value level!  It's using the value of path to do the routing.
+
+```
+route Proxy subserver = StaticRouter $
+    M.singleton (cs (<b>symbolVal proxyPath</b>))
+                (route (Proxy :: Proxy sublayout) subserver)
+  where proxyPath = Proxy :: Proxy path
+```
+
+route is then called recursively on the subsever (which has type sublayout).
+
+```
+route Proxy subserver = StaticRouter $
+    M.singleton (cs (symbolVal proxyPath))
+                (<b>route (Proxy :: Proxy sublayout) subserver</b>)
+  where proxyPath = Proxy :: Proxy path
+```
+
+In this case, subserver will be our dogNums function, and the sublayout type
+will be Get '[JSON] [Int].
+
+```
+type MyAPI = "dogs" :> <b>Get '[JSON] [Int]</b>
+        :<|> "cats" :> Get '[JSON] [String]
+
+dogNums :: EitherT ServantErr IO [Int]
+dogNums = return [1,2,3,4]
+```
+
+Red Pill, Blue Pill, Bottom of the Rabit Hole
+---------------------------------------------
+
+What route function will be called in this case?  The one defined for the Get
+instance of HasServer!
+
+```
+instance ( AllCTRender ctypes a ) => HasServer (Get ctypes a) where
+  type ServerT (Get ctypes a) m = m a
+
+  route Proxy = methodRouter methodGet (Proxy :: Proxy ctypes) ok200
+```
+
+You can see that the ServerT type family becomes m a.  For us, m is EitherT
+ServantErr IO, and a is [Int].  So it becomes EitherT ServantErr IO [Int].
+That's why dogNums type is EitherT ServantErr IO [Int].
+
+```
+dogNums :: EitherT ServantErr IO [Int]
+dogNums = return [1,2,3,4]
+```
+
+Just like we did above, we can manually rewrite the type of myAPI and it will
+still compile:
+
+```
+myAPI :: EitherT ServantErr IO [Int]
+    :<|> EitherT ServantErr IO [String]
+myAPI = dogNums :<|> cats
+```
+
+We won't go into how the route function is implemented here, but you are welcome to look at the implementation of [methodRouter](https://github.com/haskell-servant/servant/blob/31b12d4bf468b9fd46f5c4b797f8ef11d0894aba/servant-server/src/Servant/Server/Internal.hs#L123) if you're interested.
 
 Conclusion
 ----------
+
+At a very high-level, the HasServer typeclass, ServerT type family, and route function are used to peal away levels of MyAPI:
+
+```
+type MyAPI = "dogs" :> Get '[JSON] [Int]
+        :<|> "cats" :> Get '[JSON] [String]
+```
+
+First, (:<|>) is pealed away and we are left with "dogs" :> Get '[JSON] [Int].
+Then (:>) is pealed away and we are left with Get '[JSON] [Int].  This gets
+turned into the actual type of the function we will be calling (dogNums).
+
+```
+dogNums :: <b>EitherT ServantErr IO [Int]</b>
+dogNums = return [1,2,3,4]
+```
 
 If you liked this tutorial, you may also like the servant tutorial itself
 (http://haskell-servant.github.io/tutorial/), or a tutorial about using servant

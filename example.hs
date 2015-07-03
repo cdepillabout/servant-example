@@ -18,8 +18,10 @@ type MyAPI = "dogs" :> Get '[JSON] [Int]
 app :: Application
 app = serve (Proxy :: Proxy MyAPI) myAPI
 
-myAPI :: ServerT ("dogs" :> Get '[JSON] [Int]) (EitherT ServantErr IO)
-    :<|> ServerT ("cats" :> Get '[JSON] [String]) (EitherT ServantErr IO)
+myAPI :: EitherT ServantErr IO [Int]
+    :<|> EitherT ServantErr IO [String]
+-- myAPI :: ServerT (Get '[JSON] [Int]) (EitherT ServantErr IO)
+--     :<|> ServerT (Get '[JSON] [String]) (EitherT ServantErr IO)
 -- myAPI :: ServerT MyAPI (EitherT ServantErr IO)
 myAPI = dogNums :<|> cats
 
