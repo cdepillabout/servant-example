@@ -16,10 +16,12 @@ type MyAPI = "dogs" :> Get '[JSON] [Int]
         :<|> "cats" :> Get '[JSON] [String]
 
 app :: Application
-app = serve (Proxy :: Proxy MyAPI) server
+app = serve (Proxy :: Proxy MyAPI) myAPI
 
-server :: ServerT MyAPI (EitherT ServantErr IO)
-server = dogNums :<|> cats
+myAPI :: ServerT ("dogs" :> Get '[JSON] [Int]) (EitherT ServantErr IO)
+    :<|> ServerT ("cats" :> Get '[JSON] [String]) (EitherT ServantErr IO)
+-- myAPI :: ServerT MyAPI (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
 
 dogNums :: EitherT ServantErr IO [Int]
 dogNums = return [1,2,3,4]
@@ -29,3 +31,4 @@ cats = return ["long-haired", "short-haired"]
 
 main :: IO ()
 main = run 32323 $ logStdoutDev app
+

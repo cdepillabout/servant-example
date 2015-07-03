@@ -456,6 +456,238 @@ class HasServer layout where
   route :: Proxy layout -> IO (RouteResult (ServerT layout (EitherT ServantErr IO))) -> Router
 ```
 
+We see that HasServer takes one parameter, layout.  We also see that ServerT is
+a typeclass that takes two parameters, layout and m.  There is one function in
+this typeclass, route.  It takes a Proxy layout and an IO of a RouteResult of a
+ServerT with the m parameter specialized to EitherT ServantErr IO.  Quite a
+mouthful.  Let's abbreviate part of the type to make it easier to diget:
+
+```
+route :: Proxy layout -> IO (RouteResult (ServerT ...)) -> Router
+```
+
+Basically route takes an IO of a RouteResult of a ServerT and returns a Router.  Let's go back real quick and look at the implementation of the serve function:
+
+```
+serve :: HasServer layout => Proxy layout -> ServerT layout (EitherT ServantErr IO) -> Application
+serve p server = toApplication (runRouter (route p (return (RR (Right server)))))
+```
+
+First off, the type of the function looks pretty similar to the route funtion:
+
+```
+serve :: HasServer layout => Proxy layout ->                 (ServerT ...)  -> Application
+route ::                     Proxy layout -> IO (RouteResult (ServerT ...)) -> Router
+```
+
+So how does the serve function work?  It's basically taking our server
+argument, wrapping it in a default RouteResult and IO, then passing it to the
+route function.
+
+```
+serve :: HasServer layout => Proxy layout -> (ServerT ...) -> Application
+serve p server = toApplication (runRouter (route p (return (RR (Right server)))))
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+												   look at all this wrapping!!!
+```
+
+It takes the resulting Router from the route function, passes it to runRouter,
+and then passes that to toApplication to get our Wai application.  Pretty easy!
+
+
+HasServer, one more time
+------------------------
+
+Let's go back to the HasServer typeclass.  Here it is again:
+
+```
+class HasServer layout where
+  type ServerT layout (m :: * -> *) :: *
+
+  route :: Proxy layout -> IO (RouteResult (ServerT layout (EitherT ServantErr IO))) -> Router
+```
+
+This typeclass basically specifies things that we can create Router's for.  We
+can then turn these routers into a Wai application.
+
+So what instances are available for the HasServer typeclass?  Let's ask ghci.
+
+```
+ghci> :info! HasServer
+...
+instance AllCTRender ctypes a => HasServer (Get ctypes a) 
+...
+instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout)
+instance (HasServer a, HasServer b) => HasServer (a :<|> b)
+ghci>
+```
+
+It looks like there are instances for Get, (:>), (:<|>).  I know where we've seen those before!  The MyAPI type!
+
+Let's take a look at the MyAPI type we defined earlier as our example code:
+
+```
+type MyAPI = "dogs" :> Get '[JSON] [Int]
+        :<|> "cats" :> Get '[JSON] [String]
+```
+
+Remember how we can rewrite type-level operators to prefix form?  Well, if we do that for (:<|>), our MyAPI will look like this:
+
+```
+type MyAPI = (:<|>) ("dogs" :> Get '[JSON] [Int]) ("cats" :> Get '[JSON] [String])
+```
+
+We could do it again for (:>) and it will get even uglier:
+
+```
+type MyAPI = (:<|>) ((:>) "dogs" (Get '[JSON] [Int])) ((:>) "cats" (Get '[JSON] [String]))
+```
+
+Okay, so here's where the explanation starts to get a little difficult.  Remember our app function?
+
+```
+app :: Application
+app = serve (Proxy :: Proxy MyAPI) myAPI
+
+myAPI :: ServerT MyAPI (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+
+dogNums :: EitherT ServantErr IO [Int]
+dogNums = return [1,2,3,4]
+
+cats :: EitherT ServantErr IO [Int]
+cats = return ["long-haired", "short-haired"]
+```
+
+It's basically just calling serve and passing it two things.  1) a Proxy with
+the MyAPI type.  2) the myAPI function, which is the actual implementation of
+our API.  You remember what serve does, right?
+
+```
+serve :: HasServer layout => Proxy layout -> ServerT layout (EitherT ServantErr IO) -> Application
+serve p server = toApplication (runRouter (route p (return (RR (Right server)))))
+```
+
+It basically just calls route with our proxy and the implementation of our api.
+
+Now for the interesting part.  Since HasServer is a typeclass, what route
+function actually gets called?  If we look at the HasServer typeclass once
+again, we can see that it depends on the type of layout (which gets pass to
+route as Proxy layout).
+
+```
+class HasServer <b>layout</b> where
+  type ServerT <b>layout</b> (m :: * -> *) :: *
+
+  route :: <b>Proxy layout</b> -> IO (RouteResult (ServerT layout ...)) -> Router
+```
+
+layout originally comes from our app function.
+
+```
+app :: Application
+app = serve (Proxy :: Proxy MyAPI) myAPI
+```
+
+Here it's MyAPI.  What's the prefix form of MyAPI?
+
+```
+type MyAPI = (:<|>) ((:>) "dogs" (Get '[JSON] [Int])) ((:>) "cats" (Get '[JSON] [String]))
+```
+
+Okay, great!  So we need the HasServer instance for (:<|>)!  What does that look like?
+
+```
+instance (HasServer a, HasServer b) => HasServer (a :<|> b) where
+  type ServerT (a :<|> b) m = ServerT a m :<|> ServerT b m
+
+  route Proxy server = choice (route pa (extractL <$> server))
+                              (route pb (extractR <$> server))
+    where pa = Proxy :: Proxy a
+          pb = Proxy :: Proxy b
+```
+
+So what's going on here?  Well, first you notice that the value the ServerT
+type family becomes ServerT a m :<|> ServerT b m.
+
+```
+type ServerT (a :<|> b) m = ServerT a m :<|> ServerT b m
+```
+
+So what's the significance of this?  Two things.  One, we can figure out the specialized type of route:
+
+```
+route :: Proxy layout -> IO (RouteResult (ServerT layout ...)) -> Router
+-- becomes
+route :: Proxy layout -> IO (RouteResult (<b>ServerT a ... :<|> ServerT b ...</b>)) -> Router
+```
+
+And two, we can change the type of our myAPI function to this, and our example
+program will still compile.  Before, we had this:
+
+```
+myAPI :: ServerT MyAPI (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+```
+
+But we could change it to this:
+
+```
+myAPI :: ServerT ("dogs" :> Get '[JSON] [Int]) (EitherT ServantErr IO)
+    :<|> ServerT ("cats" :> Get '[JSON] [String]) (EitherT ServantErr IO)
+myAPI = dogNums :<|> cats
+```
+
+It still compiles!  That's great!
+
+One Level Deeper
+----------------
+
+Going back to the HasServer instance for (:<|>), we see that the route function
+basically calls itself recursively on both arguments to (:<|>).  So, which
+route function will be called?
+
+```
+instance (HasServer a, HasServer b) => HasServer (a :<|> b) where
+  type ServerT (a :<|> b) m = ServerT a m :<|> ServerT b m
+
+  route Proxy server = choice (<b>route pa (extractL <$> server)</b>)
+                              (<b>route pb (extractR <$> server)</b>)
+    where pa = Proxy :: Proxy a
+          pb = Proxy :: Proxy b
+```
+
+Lets take a look at the first argument to (:<|>).
+
+```
+type MyAPI = <b>"dogs" :> Get '[JSON] [Int]</b>
+        :<|> "cats" :> Get '[JSON] [String]
+
+myAPI :: <b>ServerT ("dogs" :> Get '[JSON] [Int]) (EitherT ServantErr IO)</b>
+    :<|> ServerT ("cats" :> Get '[JSON] [String]) (EitherT ServantErr IO)
+myAPI = <b>dogNums</b> :<|> cats
+
+<b>dogNums :: EitherT ServantErr IO [Int]
+dogNums = return [1,2,3,4]</b>
+```
+
+You can probaby see where this is going.  The route function for the (:>) instance of HasServer will be called:
+
+```
+instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout) where
+
+  type ServerT (path :> sublayout) m = ServerT sublayout m
+
+  route Proxy subserver = StaticRouter $
+    M.singleton (cs (symbolVal proxyPath))
+                (route (Proxy :: Proxy sublayout) subserver)
+    where proxyPath = Proxy :: Proxy path
+```
+
+Similarly to (:<|>), you can see that the value of the ServerT type family becomes ServerT sublayout m.
+
+
+
 Conclusion
 ----------
 

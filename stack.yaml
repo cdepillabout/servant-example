@@ -4,4 +4,5 @@ packages:
 extra-deps:
     - servant-0.4.2
     - servant-server-0.4.2
-resolver: lts-2.14
+# resolver: lts-2.14
+resolver: nightly-2015-06-17
